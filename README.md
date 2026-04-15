@@ -3,14 +3,15 @@
 A modern, high-performance starter template for building AI-powered web services. This project integrates **FastAPI** with **LangChain** and **Groq** to provide a rapid development environment for LLM-based applications.
 
 ## 🚀 Overview
-This project provides a clean boilerplate for developers to build RESTful APIs that leverage Large Language Models (LLMs). By using **Groq** as the inference engine via **LangChain**, it achieves extremely low latency for model responses, currently targeting the **Llama 3 70B** model.
+This project provides a clean boilerplate for developers to build RESTful APIs that leverage Large Language Models (LLMs). By using **Groq** as the inference engine via **LangChain**, it achieves extremely low latency for model responses, currently targeting the **llama3-70b-8192** model. It also includes persistent chat history using **PostgreSQL** and a modern web interface.
 
 ## 🏗️ Architecture
 The system follows a lightweight, modular structure:
 
-- **Frontend Layer**: A clean, responsive web interface built with Vanilla HTML/CSS/JS.
-- **Web Layer**: FastAPI handles HTTP requests, validation (via Pydantic), and serves static files.
-- **AI Integration Layer**: LangChain provides a standardized interface to interact with Groq.
+- **Frontend Layer**: A clean, responsive web interface built with Vanilla HTML/CSS/JS, featuring Markdown rendering and chat history sidebar.
+- **Web Layer**: FastAPI handles HTTP requests, validation (via Pydantic), and serves static files.  
+- **Database Layer**: PostgreSQL stores chat history using SQLAlchemy ORM.
+- **AI Integration Layer**: LangChain provides a standardized interface to interact with Groq, enforcing clean Markdown formatting.
 - **Environment Management**: Configuration is decoupled from code using `.env` files and `python-dotenv`.
 
 ### Project Structure
@@ -21,6 +22,7 @@ a:\Coding Projects\Gen Ai\
 ├── .env              # Sensitive environment variables (API keys, config)
 ├── .gitignore        # Prevents secret leakage and avoids clutter
 ├── main.py           # Core application logic and API definitions
+├── database.py       # PostgreSQL database initialization and ORM models
 ├── requirements.txt  # Project dependencies
 └── README.md         # Documentation (you are here)
 ```
@@ -29,19 +31,28 @@ a:\Coding Projects\Gen Ai\
 - **[FastAPI](https://fastapi.tiangolo.com/)**: For the high-performance web framework.
 - **[LangChain](https://www.langchain.com/)**: To orchestrate the LLM workflow.
 - **[Groq](https://groq.com/)**: Our inference provider for lightning-fast responses.
-- **[Llama 3](https://llama.meta.com/)**: The default LLM provider.
+- **[Llama 3](https://llama.meta.com/)**: The default LLM provider (`llama3-70b-8192`).
+- **[PostgreSQL](https://www.postgresql.org/)**: For persistent chat history storage.
 
 ## ⚙️ Setup & Installation
 
 ### 1. Prerequisites
 - Python 3.8+
+- PostgreSQL database server running
 - A [Groq API Key](https://console.groq.com/keys)
 
 ### 2. Environment Configuration
-Create a `.env` file in the root directory and add your credentials:
+Create a `.env` file in the root directory and add your credentials and database configuration:
 ```env
 GROQ_API_KEY=gsk_...
 GROQ_MODEL=llama3-70b-8192
+
+# PostgreSQL Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=chatbot_db
+DB_USER=postgres
+DB_PASSWORD=your_password
 ```
 
 ### 3. Installation
@@ -67,16 +78,22 @@ The server will start at `http://127.0.0.1:8000`.
 Serves the web-based chat interface.
 
 ### `POST /chat`
-The main AI endpoint.
-- **Payload**: `{"prompt": "Your question here"}`
+The main AI endpoint for sending messages and saving history.
+- **Payload**: `{"prompt": "Your question here", "session_id": "sess_123"}`
 - **Response**: `{"response": "LLM generated answer"}`
 
-## 🔄 System Flow
+### `GET /history/{session_id}`
+Retrieves the chat history for a specific session ID.
+
+### `GET /sessions`
+Retrieves a list of all chat sessions and their last activity.
+
 1. **Input**: User types a message into the web interface.
-2. **Request**: The frontend sent a `POST` request with a JSON payload to `/chat`.
-2. **Validation**: FastAPI (Pydantic) validates that the request contains a string prompt.
-3. **Inference**: LangChain fetches the `GROQ_API_KEY` and `GROQ_MODEL` from environment variables and sends the prompt to Groq.
-4. **Response**: Groq returns the result, which LangChain passes back to FastAPI to be returned to the user.
+2. **Request**: The frontend sends a `POST` request with a JSON payload and generated `session_id` to `/chat`.
+3. **Database (User)**: The user message is stored in PostgreSQL via SQLAlchemy.
+4. **Inference**: LangChain fetches the `GROQ_API_KEY` and `GROQ_MODEL` from environment variables, applies the Markdown system prompt, and sends the user prompt to Groq.
+5. **Database (Bot)**: The generated response is stored in PostgreSQL.
+6. **Response**: Groq returns the result, which LangChain passes back to FastAPI to be rendered beautifully on the frontend using marked.js.
 
 ## 🔮 Future Improvements
 - [ ] **Streaming Support**: Implement Server-Sent Events (SSE) for real-time token streaming.
