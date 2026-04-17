@@ -31,10 +31,14 @@ const loadHistory = async (sessionId) => {
         const response = await fetch(`/history/${sessionId}`);
         const history = await response.json();
         chatMessages.innerHTML = ''; // Clear current view
-        history.forEach(item => {
-            addMessage(item.user_message, 'user');
-            addMessage(item.bot_response, 'ai');
-        });
+        if (history.length === 0) {
+            chatMessages.innerHTML = '<div class="message ai"><div class="content">New conversation started! How can I help?</div></div>';
+        } else {
+            history.forEach(item => {
+                const type = item.role === 'assistant' ? 'ai' : 'user';
+                addMessage(item.content, type);
+            });
+        }
     } catch (error) {
         console.error('Error loading history:', error);
     }
@@ -49,7 +53,12 @@ const loadSessions = async () => {
             const item = document.createElement('div');
             item.classList.add('session-item');
             if (s.session_id === currentSessionId) item.classList.add('active');
-            item.textContent = s.session_id;
+            
+            // Set the text to the human-readable title and store the session_id
+            item.textContent = s.title || s.session_id;
+            item.title = s.title || s.session_id; // Add a tooltip for truncated text
+            item.dataset.sessionId = s.session_id;
+            
             item.onclick = () => {
                 currentSessionId = s.session_id;
                 localStorage.setItem('chat_session_id', currentSessionId);
@@ -65,7 +74,7 @@ const loadSessions = async () => {
 
 const updateActiveSessionUI = () => {
     document.querySelectorAll('.session-item').forEach(el => {
-        el.classList.toggle('active', el.textContent === currentSessionId);
+        el.classList.toggle('active', el.dataset.sessionId === currentSessionId);
     });
 };
 

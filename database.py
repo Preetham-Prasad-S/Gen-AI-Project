@@ -20,13 +20,20 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-class ChatHistory(Base):
-    __tablename__ = "chat_history"
+class SessionModel(Base):
+    __tablename__ = "sessions"
+    
+    session_id = Column(String, primary_key=True, index=True)
+    title = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class MessageModel(Base):
+    __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String, index=True)
-    user_message = Column(Text)
-    bot_response = Column(Text)
+    role = Column(String) # "user" or "assistant"
+    content = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 def init_db():
