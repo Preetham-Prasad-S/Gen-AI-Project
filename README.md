@@ -3,15 +3,15 @@
 A modern, high-performance starter template for building AI-powered web services. This project integrates **FastAPI** with **LangChain** and **Groq** to provide a rapid development environment for LLM-based applications.
 
 ## 🚀 Overview
-This project provides a clean boilerplate for developers to build RESTful APIs that leverage Large Language Models (LLMs). By using **Groq** as the inference engine via **LangChain**, it achieves extremely low latency for model responses, currently targeting the **llama3-70b-8192** model. It also includes persistent chat history using **PostgreSQL** and a modern web interface.
+This project provides a clean boilerplate for developers to build RESTful APIs that leverage Large Language Models (LLMs). By using **Groq** as the inference engine via **LangChain**, it achieves extremely low latency for model responses, currently targeting the **llama3-70b-8192** model. It features robust capabilities including persistent local **PostgreSQL** storage for context retention, an intelligent on-demand **chat summarization** feature directly integrated into the prompt history, elegant **conversation deletion**, and a highly responsive modern web interface with reactive animated feedback.
 
 ## 🏗️ Architecture
 The system follows a lightweight, modular structure:
 
-- **Frontend Layer**: A clean, responsive web interface built with Vanilla HTML/CSS/JS, featuring Markdown rendering and chat history sidebar.
+- **Frontend Layer**: A clean, responsive web interface built with Vanilla HTML/CSS/JS, featuring Markdown rendering, micro-animations, loading indicators, and a dynamic chat history sidebar.
 - **Web Layer**: FastAPI handles HTTP requests, validation (via Pydantic), and serves static files.  
-- **Database Layer**: PostgreSQL stores chat history using SQLAlchemy ORM.
-- **AI Integration Layer**: LangChain provides a standardized interface to interact with Groq, enforcing clean Markdown formatting.
+- **Database Layer**: PostgreSQL stores chat history safely with referential integrity (ON DELETE CASCADE) using SQLAlchemy ORM.
+- **AI Integration Layer**: LangChain provides a standardized interface to interact with Groq, enforcing clean Markdown formatting, automatic topic-title generation, and conversation summarization routines.
 - **Environment Management**: Configuration is decoupled from code using `.env` files and `python-dotenv`.
 
 ### Project Structure

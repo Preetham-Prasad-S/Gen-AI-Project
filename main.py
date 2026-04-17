@@ -109,6 +109,46 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/sessions/{session_id}")
+async def delete_session(session_id: str, db: Session = Depends(get_db)):
+    db_session = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    db.delete(db_session)
+    db.commit()
+    return {"message": "Session deleted"}
+
+@app.post("/sessions/{session_id}/summarize")
+async def summarize_session(session_id: str, db: Session = Depends(get_db)):
+    db_session = db.query(SessionModel).filter(SessionModel.session_id == session_id).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    messages = db.query(MessageModel).filter(MessageModel.session_id == session_id).order_by(MessageModel.timestamp.asc()).all()
+    if len(messages) == 0:
+        return {"summary": "No messages to summarize"}
+
+    chat_history = "\n".join([f"{msg.role}: {msg.content}" for msg in messages])
+    
+    summary_prompt = [
+        SystemMessage(content="You are a helpful AI that summarizes conversations. Provide a concise 2-3 sentence summary of the following conversation in Markdown format."),
+        HumanMessage(content=chat_history)
+    ]
+    
+    response = llm.invoke(summary_prompt)
+    summary_content = f"**Conversation Summary:**\n\n{response.content.strip()}"
+    
+    db_session.summary = response.content.strip() # Still update the session model for any backend need
+    
+    # Save the summary as an assistant message
+    bot_summary_msg = MessageModel(session_id=session_id, role="assistant", content=summary_content)
+    db.add(bot_summary_msg)
+    
+    db.commit()
+    
+    return {"summary": summary_content}
+
 @app.get("/history/{session_id}")
 async def get_history(session_id: str, db: Session = Depends(get_db)):
     # Fetch messages and format them for the frontend
@@ -124,6 +164,7 @@ async def get_sessions(db: Session = Depends(get_db)):
     sessions_activity = db.query(
         SessionModel.session_id,
         SessionModel.title,
+        SessionModel.summary,
         func.max(MessageModel.timestamp).label("last_activity")
     ).outerjoin(MessageModel, SessionModel.session_id == MessageModel.session_id)\
      .group_by(SessionModel.session_id).order_by(func.max(MessageModel.timestamp).desc().nulls_last()).all()
@@ -133,6 +174,7 @@ async def get_sessions(db: Session = Depends(get_db)):
         result.append({
             "session_id": s.session_id, 
             "title": s.title if s.title else "New Chat",
+            "summary": s.summary,
             "last_activity": s.last_activity
         })
     return result
