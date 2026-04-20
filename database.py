@@ -13,9 +13,31 @@ DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 DB_NAME = os.getenv("DB_NAME")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Use SQLite as a fallback if PostgreSQL connection fails or isn't configured
+if all([DB_USER, DB_HOST, DB_NAME]):
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    try:
+        # Quick test to see if we can connect
+        import psycopg2
+        conn = psycopg2.connect(
+            user=DB_USER, 
+            password=DB_PASSWORD, 
+            host=DB_HOST, 
+            port=DB_PORT, 
+            database="postgres",
+            connect_timeout=1
+        )
+        conn.close()
+    except Exception:
+        print("PostgreSQL connection failed. Falling back to SQLite.")
+        DATABASE_URL = "sqlite:///./chatbot.db"
+else:
+    DATABASE_URL = "sqlite:///./chatbot.db"
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL, 
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

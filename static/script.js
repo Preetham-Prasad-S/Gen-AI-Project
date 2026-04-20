@@ -5,7 +5,9 @@ const sendBtn = document.getElementById('send-btn');
 const sessionList = document.getElementById('session-list');
 const newChatBtn = document.getElementById('new-chat-btn');
 const chatTitleEl = document.getElementById('chat-title');
+const chatMetadataEl = document.getElementById('chat-metadata');
 const summarizeBtn = document.getElementById('summarize-btn');
+const summaryContentEl = document.getElementById('summary-content');
 
 let currentSessionId = localStorage.getItem('chat_session_id') || generateUUID();
 let typingIndicator = null;
@@ -19,8 +21,6 @@ const addMessage = (content, type) => {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', type);
     
-    // We already styled message.ai and its inner contents (Markdown)
-    // and user messages too. The summary is just another AI message.
     if (type === 'ai') {
         messageDiv.innerHTML = `<div class="content">${marked.parse(content)}</div>`;
     } else {
@@ -28,7 +28,13 @@ const addMessage = (content, type) => {
     }
     
     chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Smooth scroll to bottom
+    const scrollTarget = chatMessages.closest('.chat-main') || chatMessages;
+    scrollTarget.scrollTo({
+        top: scrollTarget.scrollHeight,
+        behavior: 'smooth'
+    });
 };
 
 const showTypingIndicator = () => {
@@ -40,7 +46,12 @@ const showTypingIndicator = () => {
             <span></span><span></span><span></span>
         </div>`;
     chatMessages.appendChild(typingIndicator);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    const scrollTarget = chatMessages.closest('.chat-main') || chatMessages;
+    scrollTarget.scrollTo({
+        top: scrollTarget.scrollHeight,
+        behavior: 'smooth'
+    });
 };
 
 const hideTypingIndicator = () => {
@@ -50,21 +61,26 @@ const hideTypingIndicator = () => {
     }
 };
 
-const updateHeaderInfo = () => {
-    const activeSessionItem = document.querySelector(`.session-item-container[data-session-id="${currentSessionId}"]`);
-    if (activeSessionItem) {
-        const titleText = activeSessionItem.querySelector('.session-title').textContent;
-        chatTitleEl.textContent = titleText;
+const updateHeaderInfo = (sessionData = null) => {
+    if (sessionData) {
+        chatTitleEl.textContent = sessionData.title || "New Curation";
+        chatMetadataEl.textContent = `Exploration initiated • Session ID: #${sessionData.session_id.toUpperCase()}`;
         
-        // Show summarize if enough messages
-        if (chatMessages.children.length > 1 || (chatMessages.children.length === 1 && chatMessages.children[0].classList.contains('user'))) {
-            summarizeBtn.style.display = 'block';
+        if (sessionData.summary) {
+            summaryContentEl.innerHTML = `<div class="text-secondary small">${marked.parse(sessionData.summary)}</div>`;
         } else {
-            summarizeBtn.style.display = 'none';
+            summaryContentEl.innerHTML = '<div class="summary-placeholder text-secondary small"><p>Send messages to generate a summary.</p></div>';
         }
     } else {
-        chatTitleEl.textContent = "AI Assistant";
-        summarizeBtn.style.display = 'none';
+        const activeSessionItem = document.querySelector(`.session-item-container[data-session-id="${currentSessionId}"]`);
+        if (activeSessionItem) {
+            const titleText = activeSessionItem.querySelector('.session-title').textContent;
+            chatTitleEl.textContent = titleText;
+            chatMetadataEl.textContent = `Exploration initiated • Session ID: #${currentSessionId.toUpperCase()}`;
+        } else {
+            chatTitleEl.textContent = "New Curation";
+            chatMetadataEl.textContent = "Exploration initiated • Session ID: #NEW";
+        }
     }
 };
 
@@ -77,10 +93,10 @@ const loadHistory = async (sessionId) => {
         const history = await response.json();
         
         hideTypingIndicator();
-        chatMessages.innerHTML = ''; // Clear fully after loading
+        chatMessages.innerHTML = ''; 
 
         if (history.length === 0) {
-            chatMessages.innerHTML = '<div class="message ai"><div class="content">New conversation started! How can I help?</div></div>';
+            addMessage("Hello! I am your AI Curator. How can I assist your exploration today?", 'ai');
         } else {
             history.forEach(item => {
                 const type = item.role === 'assistant' ? 'ai' : 'user';
@@ -88,6 +104,12 @@ const loadHistory = async (sessionId) => {
             });
         }
         updateHeaderInfo();
+
+        // Ensure we are at the bottom after loading history
+        setTimeout(() => {
+            const scrollTarget = chatMessages.closest('.chat-main') || chatMessages;
+            scrollTarget.scrollTop = scrollTarget.scrollHeight;
+        }, 100);
     } catch (error) {
         console.error('Error loading history:', error);
         hideTypingIndicator();
@@ -110,13 +132,12 @@ const loadSessions = async () => {
             
             const title = document.createElement('div');
             title.className = 'session-title';
-            title.textContent = s.title || s.session_id;
-            title.title = s.title || s.session_id;
+            title.textContent = s.title || "New Curation";
+            title.title = s.title || "New Curation";
             content.appendChild(title);
 
-            if (s.summary) {
-                // If it's already summarized, we can potentially hide the button
-                // But the button logic relies on child nodes in chat box currently.
+            if (s.session_id === currentSessionId) {
+                updateHeaderInfo(s);
             }
 
             content.onclick = () => {
@@ -128,19 +149,16 @@ const loadSessions = async () => {
                 });
                 
                 loadHistory(currentSessionId);
+                updateHeaderInfo(s);
             };
 
             const delBtn = document.createElement('button');
             delBtn.className = 'delete-btn';
-            delBtn.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>`;
-            delBtn.title = "Delete Conversation";
+            delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+            delBtn.title = "Delete Curation";
             delBtn.onclick = async (e) => {
                 e.stopPropagation();
-                if (confirm('Are you sure you want to delete this conversation?')) {
+                if (confirm('Are you sure you want to delete this curation?')) {
                     try {
                         await fetch(`/sessions/${s.session_id}`, { method: 'DELETE' });
                         if (currentSessionId === s.session_id) {
@@ -158,7 +176,6 @@ const loadSessions = async () => {
             container.appendChild(delBtn);
             sessionList.appendChild(container);
         });
-        updateHeaderInfo();
     } catch (error) {
         console.error('Error loading sessions:', error);
     }
@@ -166,14 +183,15 @@ const loadSessions = async () => {
 
 summarizeBtn.onclick = async () => {
     const originalText = summarizeBtn.textContent;
-    summarizeBtn.textContent = 'Summarizing...';
+    summarizeBtn.textContent = 'SUMMARIZING...';
     summarizeBtn.disabled = true;
     showTypingIndicator();
     try {
         const response = await fetch(`/sessions/${currentSessionId}/summarize`, { method: 'POST' });
         if (response.ok) {
             hideTypingIndicator();
-            await loadHistory(currentSessionId);
+            const data = await response.json();
+            summaryContentEl.innerHTML = `<div class="text-secondary small">${marked.parse(data.summary)}</div>`;
             await loadSessions(); 
         } else {
             hideTypingIndicator();
@@ -192,8 +210,10 @@ newChatBtn.onclick = () => {
     currentSessionId = generateUUID();
     localStorage.setItem('chat_session_id', currentSessionId);
     chatMessages.innerHTML = '';
+    summaryContentEl.innerHTML = '<div class="summary-placeholder text-secondary small"><p>Send messages to generate a summary.</p></div>';
     loadSessions();
     loadHistory(currentSessionId);
+    updateHeaderInfo();
 };
 
 chatForm.addEventListener('submit', async (e) => {
@@ -207,7 +227,7 @@ chatForm.addEventListener('submit', async (e) => {
     userInput.disabled = true;
     const originalBtnContent = sendBtn.innerHTML;
     sendBtn.disabled = true;
-    sendBtn.innerHTML = '<div class="loading"></div>';
+    sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
 
     showTypingIndicator();
 
