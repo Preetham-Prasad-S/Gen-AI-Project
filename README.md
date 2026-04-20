@@ -63,7 +63,7 @@ pip install -r requirements.txt
 1. Open your PostgreSQL client (like pgAdmin or psql).
 2. Create a new database:
    ```sql
-   CREATE DATABASE curator_db;
+   CREATE DATABASE chatbot_db;
    ```
 3. Ensure your PostgreSQL service is running on the default port (5432).
 
@@ -78,7 +78,7 @@ GROQ_MODEL=llama3-70b-8192
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=curator_db
+DB_NAME=chatbot_db
 DB_USER=postgres
 DB_PASSWORD=your_password_here
 ```
