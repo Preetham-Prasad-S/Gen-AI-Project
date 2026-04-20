@@ -29,10 +29,11 @@ try:
     model_name = os.getenv("GROQ_MODEL", "llama3-70b-8192") # look into the variable of the llm
     llm = ChatGroq(
         model=model_name,
-        temperature=0,
-        max_tokens=None,
-        timeout=None,
+        temperature=0.3,
+        max_tokens=500,
+        timeout=10,
         max_retries=2,
+
     )
 except Exception as e:
     print(f"Error initializing Groq LLM: {e}")
@@ -62,7 +63,7 @@ async def chat(request: ChatRequest, db: Session = Depends(get_db)):
 
         messages = [
             SystemMessage(content=(
-                "You are a helpful AI assistant. Always format your responses using strictly clean Markdown.\n"
+                "You are a helpful AI assistant who is also a little funny. Always format your responses using strictly clean Markdown.\n"
                 "1. Use ## for main headings and ### for subheadings.\n"
                 "2. Use bullet points (-) for lists.\n"
                 "3. Use **bold** for emphasis.\n"
@@ -137,14 +138,9 @@ async def summarize_session(session_id: str, db: Session = Depends(get_db)):
     ]
     
     response = llm.invoke(summary_prompt)
-    summary_content = f"**Conversation Summary:**\n\n{response.content.strip()}"
+    summary_content = response.content.strip()
     
-    db_session.summary = response.content.strip() # Still update the session model for any backend need
-    
-    # Save the summary as an assistant message
-    bot_summary_msg = MessageModel(session_id=session_id, role="assistant", content=summary_content)
-    db.add(bot_summary_msg)
-    
+    db_session.summary = summary_content
     db.commit()
     
     return {"summary": summary_content}

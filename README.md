@@ -1,105 +1,134 @@
-# FastAPI + LangChain Groq Template
+# The Curator | AI Curation Assistant
 
-A modern, high-performance starter template for building AI-powered web services. This project integrates **FastAPI** with **LangChain** and **Groq** to provide a rapid development environment for LLM-based applications.
+A modern, high-performance AI chatbot platform. This project integrates **FastAPI** with **LangChain** and **Groq** to provide a rapid, low-latency development environment for LLM-based applications with persistent memory and summarization.
+
+---
 
 ## 🚀 Overview
-This project provides a clean boilerplate for developers to build RESTful APIs that leverage Large Language Models (LLMs). By using **Groq** as the inference engine via **LangChain**, it achieves extremely low latency for model responses, currently targeting the **llama3-70b-8192** model. It features robust capabilities including persistent local **PostgreSQL** storage for context retention, an intelligent on-demand **chat summarization** feature directly integrated into the prompt history, elegant **conversation deletion**, and a highly responsive modern web interface with reactive animated feedback.
+The Curator is an AI-powered chat application that leverages Large Language Models (LLMs) for intelligent conversation. By using **Groq** as the inference engine via **LangChain**, it achieves extremely low latency.
+
+**Key Features:**
+- **Persistent Memory**: Full chat history stored in **PostgreSQL**.
+- **Context-Aware**: AI remembers previous messages in a session.
+- **Auto-Titling**: Automatically generates topic-based titles for new conversations.
+- **Dedicated Summarization**: One-click conversation summaries displayed in a dedicated sidebar.
+- **Clean UI**: Modern, dark-themed interface built with Bootstrap 5 and Markdown support.
+
+---
 
 ## 🏗️ Architecture
-The system follows a lightweight, modular structure:
+- **Frontend**: Vanilla HTML/CSS/JS with Bootstrap 5 and `marked.js` for Markdown rendering.
+- **Backend**: FastAPI (Python) serving RESTful API endpoints.
+- **AI Layer**: LangChain orchestrating Groq (Llama 3) models.
+- **Database**: PostgreSQL with SQLAlchemy ORM for reliable data persistence.
 
-- **Frontend Layer**: A clean, responsive web interface built with Vanilla HTML/CSS/JS, featuring Markdown rendering, micro-animations, loading indicators, and a dynamic chat history sidebar.
-- **Web Layer**: FastAPI handles HTTP requests, validation (via Pydantic), and serves static files.  
-- **Database Layer**: PostgreSQL stores chat history safely with referential integrity (ON DELETE CASCADE) using SQLAlchemy ORM.
-- **AI Integration Layer**: LangChain provides a standardized interface to interact with Groq, enforcing clean Markdown formatting, automatic topic-title generation, and conversation summarization routines.
-- **Environment Management**: Configuration is decoupled from code using `.env` files and `python-dotenv`.
-
-### Project Structure
-```text
-a:\Coding Projects\Gen Ai\
-├── static/           # Frontend assets (HTML, CSS, JS)
-├── .venv/            # Isolated Python environment
-├── .env              # Sensitive environment variables (API keys, config)
-├── .gitignore        # Prevents secret leakage and avoids clutter
-├── main.py           # Core application logic and API definitions
-├── database.py       # PostgreSQL database initialization and ORM models
-├── requirements.txt  # Project dependencies
-└── README.md         # Documentation (you are here)
-```
-
-## 🛠️ Tech Stack
-- **[FastAPI](https://fastapi.tiangolo.com/)**: For the high-performance web framework.
-- **[LangChain](https://www.langchain.com/)**: To orchestrate the LLM workflow.
-- **[Groq](https://groq.com/)**: Our inference provider for lightning-fast responses.
-- **[Llama 3](https://llama.meta.com/)**: The default LLM provider (`llama3-70b-8192`).
-- **[PostgreSQL](https://www.postgresql.org/)**: For persistent chat history storage.
+---
 
 ## ⚙️ Setup & Installation
 
-### 1. Prerequisites
-- Python 3.8+
-- PostgreSQL database server running
-- A [Groq API Key](https://console.groq.com/keys)
+Follow these steps to get the project running on your local machine.
 
-### 2. Environment Configuration
-Create a `.env` file in the root directory and add your credentials and database configuration:
+### 1. Prerequisites
+- **Python 3.8+** installed.
+- **PostgreSQL** installed and running.
+- A **Groq API Key** (Get one at [console.groq.com](https://console.groq.com/)).
+
+### 2. Clone the Repository
+```bash
+git clone <your-repo-url>
+cd "Gen Ai"
+```
+
+### 3. Python Environment Setup
+Create and activate a virtual environment to manage dependencies:
+
+**Windows:**
+```bash
+python -m venv venv
+.\venv\Scripts\activate
+```
+
+**macOS/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 4. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 5. PostgreSQL Database Setup
+1. Open your PostgreSQL client (like pgAdmin or psql).
+2. Create a new database:
+   ```sql
+   CREATE DATABASE chatbot_db;
+   ```
+3. Ensure your PostgreSQL service is running on the default port (5432).
+
+### 6. Environment Configuration
+Create a `.env` file in the root directory and populate it with your credentials:
+
 ```env
-GROQ_API_KEY=gsk_...
+# AI Configuration
+GROQ_API_KEY=gsk_your_actual_key_here
 GROQ_MODEL=llama3-70b-8192
 
-# PostgreSQL Database Configuration
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=chatbot_db
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=your_password_here
 ```
-
-### 3. Installation
-Activate your virtual environment and install dependencies:
-```bash
-# Activation (Windows)
-.\.venv\Scripts\activate
-
-# Install requirements
-pip install -r requirements.txt
-```
-
-### 4. Running the Project
-Start the development server:
-```bash
-python main.py
-```
-The server will start at `http://127.0.0.1:8000`.
-
-## 📡 API Endpoints
-
-### `GET /`
-Serves the web-based chat interface.
-
-### `POST /chat`
-The main AI endpoint for sending messages and saving history.
-- **Payload**: `{"prompt": "Your question here", "session_id": "sess_123"}`
-- **Response**: `{"response": "LLM generated answer"}`
-
-### `GET /history/{session_id}`
-Retrieves the chat history for a specific session ID.
-
-### `GET /sessions`
-Retrieves a list of all chat sessions and their last activity.
-
-1. **Input**: User types a message into the web interface.
-2. **Request**: The frontend sends a `POST` request with a JSON payload and generated `session_id` to `/chat`.
-3. **Database (User)**: The user message is stored in PostgreSQL via SQLAlchemy.
-4. **Inference**: LangChain fetches the `GROQ_API_KEY` and `GROQ_MODEL` from environment variables, applies the Markdown system prompt, and sends the user prompt to Groq.
-5. **Database (Bot)**: The generated response is stored in PostgreSQL.
-6. **Response**: Groq returns the result, which LangChain passes back to FastAPI to be rendered beautifully on the frontend using marked.js.
-
-## 🔮 Future Improvements
-- [ ] **Streaming Support**: Implement Server-Sent Events (SSE) for real-time token streaming.
-- [ ] **Conversation Memory**: Add Redis or local storage to support multi-turn chats.
-- [ ] **Enhanced Prompt Templates**: Implement specific system prompts for different personas.
-- [ ] **Advanced Error Handling**: Improve retry logic for rate-limiting scenarios.
 
 ---
-*Created with ❤️ using Antigravity.*
+
+## 🚀 Running the Application
+
+1. **Start the Backend:**
+   Run the following command in your terminal:
+   ```bash
+   python main.py
+   ```
+   *The script will automatically initialize the database tables on its first run.*
+
+2. **Access the Interface:**
+   Open your browser and navigate to:
+   [http://localhost:8000](http://localhost:8000)
+
+---
+
+## 📖 Usage Guide
+
+- **Starting a Chat**: Simply type your message in the bottom input bar and press enter. A new session will be created automatically if none is active.
+- **New Conversation**: Click **"+ New Curation"** in the left sidebar to start a fresh session.
+- **Switching Sessions**: Click any session under **"Global Archives"** in the sidebar to load its history.
+- **Summarization**: Click the **"SUMMARIZE CHAT"** button in the right sidebar. The summary will appear exclusively in that tab without cluttering your chat flow.
+- **Deleting History**: Click the **trash icon** next to any session in the sidebar to permanently delete it.
+
+---
+
+## 🛠️ Troubleshooting
+
+- **Database connection errors**: 
+  - Ensure PostgreSQL is running.
+  - Double-check `DB_USER` and `DB_PASSWORD` in your `.env`.
+  - Verify the `DB_NAME` exists.
+- **LLM not initializing**:
+  - Check that your `GROQ_API_KEY` is valid and has not expired.
+  - Ensure you have an active internet connection.
+- **API not responding**:
+  - Ensure no other process is using port 8000.
+  - Check the terminal output for Python tracebacks or error logs.
+
+---
+
+## 🛡️ Best Practices
+- **Security**: Never commit your `.env` file to version control.
+- **API Limits**: Be mindful of Groq's rate limits if using a free tier key.
+- **Clean Shutdown**: Use `Ctrl+C` in the terminal to gracefully stop the FastAPI server.
+
+---
+*Developed as a modern starter for AI-driven applications.*
